@@ -13,22 +13,40 @@ pub enum Language {
     System,
     En,
     Uk,
+    PtBr,
 }
 
 impl Language {
-    pub const ALL: [Self; 3] = [Self::System, Self::En, Self::Uk];
+    pub const ALL: [Self; 4] = [Self::System, Self::En, Self::Uk, Self::PtBr];
 
     pub fn label(self) -> &'static str {
         match self {
             Self::System => tr("System language"),
             Self::En => "English",
             Self::Uk => "Українська",
+            Self::PtBr => "Português (Brasil)",
+        }
+    }
+
+    /// The `app.language` code and the saved preference value.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::System => "system",
+            Self::En => "en",
+            Self::Uk => "uk",
+            Self::PtBr => "pt-BR",
         }
     }
 
     pub fn from_locale(locale: &str) -> Self {
         let language = locale.split(['-', '_', '.', '@']).next().unwrap_or("");
-        if language.eq_ignore_ascii_case("uk") { Self::Uk } else { Self::En }
+        if language.eq_ignore_ascii_case("uk") {
+            Self::Uk
+        } else if language.eq_ignore_ascii_case("pt") {
+            Self::PtBr
+        } else {
+            Self::En
+        }
     }
 
     pub fn resolve(self, locale: Option<&str>) -> Self {
@@ -48,28 +66,42 @@ pub fn set_current(language: Language) {
     CURRENT.set(language);
 }
 
-const CATALOG: &str = include_str!("i18n/uk.tsv");
+const UK_SOURCE: &str = include_str!("i18n/uk.tsv");
+const PT_BR_SOURCE: &str = include_str!("i18n/pt-br.tsv");
 static UK: OnceLock<HashMap<String, String>> = OnceLock::new();
+static PT_BR: OnceLock<HashMap<String, String>> = OnceLock::new();
 
-fn catalog() -> &'static HashMap<String, String> {
-    UK.get_or_init(|| {
-        CATALOG
-            .lines()
-            .filter(|line| !line.is_empty() && !line.starts_with('#'))
-            .filter_map(|line| line.split_once('\t'))
-            .map(|(source, text)| (source.replace("\\n", "\n"), text.replace("\\n", "\n")))
-            .collect()
-    })
+fn parse(source: &str) -> HashMap<String, String> {
+    source
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .filter_map(|line| line.split_once('\t'))
+        .map(|(source, text)| (source.replace("\\n", "\n"), text.replace("\\n", "\n")))
+        .collect()
+}
+
+/// The catalog of a language that has one. English — and a `System` preference before it resolves —
+/// has none, so its text stays as written.
+pub fn catalog(language: Language) -> Option<&'static HashMap<String, String>> {
+    match language {
+        Language::Uk => Some(UK.get_or_init(|| parse(UK_SOURCE))),
+        Language::PtBr => Some(PT_BR.get_or_init(|| parse(PT_BR_SOURCE))),
+        _ => None,
+    }
+}
+
+fn active_catalog() -> Option<&'static HashMap<String, String>> {
+    catalog(CURRENT.get())
 }
 
 /// Exact lookup at an explicit interface boundary; unknown text falls back to English.
 pub fn tr(text: &str) -> &str {
-    if CURRENT.get() == Language::Uk { catalog().get(text).map(String::as_str).unwrap_or(text) } else { text }
+    active_catalog().and_then(|c| c.get(text)).map(String::as_str).unwrap_or(text)
 }
 
 /// Context-specific interface label with the original English source as fallback.
 pub fn tr_context<'a>(source: &'a str, key: &str) -> &'a str {
-    if CURRENT.get() == Language::Uk { catalog().get(key).map(String::as_str).unwrap_or(source) } else { source }
+    active_catalog().and_then(|c| c.get(key)).map(String::as_str).unwrap_or(source)
 }
 
 pub fn placeholder_prompt(kind: deckcraft_model::PhType) -> &'static str {
@@ -101,28 +133,33 @@ pub fn format(source: &str, values: &[String]) -> String {
     out
 }
 
-/// Ukrainian integer count forms: 1/21; 2–4/22–24; 0/5–19.
-pub fn count(n: usize, english: &str, one: &str, few: &str, many: &str) -> String {
-    let word = if CURRENT.get() == Language::Uk {
-        match (n % 10, n % 100) {
-            (1, last) if last != 11 => one,
-            (2..=4, last) if !(12..=14).contains(&last) => few,
-            _ => many,
-        }
-    } else {
-        english
+/// Integer count of a noun. `english` is the English form the caller already chose; `uk` carries the
+/// three Ukrainian forms (`one|few|many`) and `pt` the two Portuguese forms (`one|other`), both
+/// pipe-separated. A language without forms of its own falls back to English.
+pub fn count(n: usize, english: &str, uk: &str, pt: &str) -> String {
+    let selected = match CURRENT.get() {
+        Language::Uk => Some((
+            uk,
+            match (n % 10, n % 100) {
+                (1, last) if last != 11 => 0,
+                (2..=4, last) if !(12..=14).contains(&last) => 1,
+                _ => 2,
+            },
+        )),
+        Language::PtBr => Some((pt, usize::from(n > 1))),
+        _ => None,
     };
+    let word = selected.and_then(|(forms, index)| forms.split('|').nth(index)).unwrap_or(english);
     format!("{n} {word}")
 }
 
-/// Recovery notice includes accusative Ukrainian forms.
+/// Recovery notice includes the Ukrainian accusative forms and the Portuguese ones.
 pub fn recovered(n: usize) -> String {
     let amount = count(
         n,
         if n == 1 { "unsaved presentation" } else { "unsaved presentations" },
-        "незбережену презентацію",
-        "незбережені презентації",
-        "незбережених презентацій",
+        "незбережену презентацію|незбережені презентації|незбережених презентацій",
+        "apresentação não salva|apresentações não salvas",
     );
     format("Recovered {} from the last session", &[amount])
 }
@@ -167,22 +204,26 @@ mod tests {
         required.extend(deckcraft_color::STANDARD_COLORS.iter().map(|color| color.1));
         required.extend(deckcraft_color::SchemeSlot::THEME.iter().map(|slot| slot.label()));
         required.extend(["@ribbon:Home", "@ribbon:Insert"]);
-        for option in deckcraft_model::anim::TRANSITIONS
-            .iter()
-            .flat_map(|effect| effect.4)
-            .chain(deckcraft_model::anim::ANIMATIONS.iter().flat_map(|effect| effect.5))
-        {
-            let label = crate::ribbon::option_label(option);
-            if !label.is_empty() && !label.chars().all(|c| c.is_ascii_digit()) {
-                assert!(catalog().contains_key(&label), "missing effect option: {option}: {label}");
+        for language in [Language::Uk, Language::PtBr] {
+            let catalog = catalog(language).unwrap();
+            for option in deckcraft_model::anim::TRANSITIONS
+                .iter()
+                .flat_map(|effect| effect.4)
+                .chain(deckcraft_model::anim::ANIMATIONS.iter().flat_map(|effect| effect.5))
+            {
+                let label = crate::ribbon::option_label(option);
+                if !label.is_empty() && !label.chars().all(|c| c.is_ascii_digit()) {
+                    assert!(catalog.contains_key(&label), "{language:?}: missing effect option: {option}: {label}");
+                }
             }
+            let missing: Vec<_> = required.iter().filter(|key| !catalog.contains_key(**key)).collect();
+            assert!(missing.is_empty(), "{language:?}: missing visible metadata: {missing:?}");
         }
-        let missing: Vec<_> = required.into_iter().filter(|key| !catalog().contains_key(*key)).collect();
-        assert!(missing.is_empty(), "missing visible metadata: {missing:?}");
     }
 
-    #[test]
-    fn every_literal_translation_call_has_a_catalog_entry() {
+    /// Every literal passed to `i18n::tr` / `i18n::format` in the UI crates and the apps.
+    fn literal_translation_keys() -> Vec<String> {
+        let mut keys = vec![];
         for source in [
             include_str!("canvas.rs"),
             include_str!("credits.rs"),
@@ -222,9 +263,20 @@ mod tests {
                         })
                         .unwrap();
                     let key: String = serde_json::from_str(&format!("\"{}\"", &tail[..end])).unwrap();
-                    assert!(catalog().contains_key(&key), "missing literal translation: {key}");
+                    keys.push(key);
                     rest = &tail[end + 1..];
                 }
+            }
+        }
+        keys
+    }
+
+    #[test]
+    fn every_literal_translation_call_has_a_catalog_entry() {
+        for language in [Language::Uk, Language::PtBr] {
+            let catalog = catalog(language).unwrap();
+            for key in literal_translation_keys() {
+                assert!(catalog.contains_key(&key), "{language:?}: missing literal translation: {key}");
             }
         }
     }
@@ -261,8 +313,43 @@ mod tests {
         output.textures_delta.clear();
         let db = deckcraft_fonts::FontDb::with_font_dirs(vec![]);
         let face = db.face(deckcraft_fonts::LAST_RESORT_FAMILY, "Regular");
+        let letters: std::collections::HashSet<_> = catalog(Language::Uk)
+            .unwrap()
+            .values()
+            .flat_map(|value| value.chars())
+            .chain("ҐґЄєІіЇї".chars())
+            .filter(|c| ('\u{0400}'..='\u{04ff}').contains(c))
+            .collect();
+        for c in letters {
+            assert_ne!(face.glyph_for(c), 0, "missing document fallback glyph: {c}");
+        }
+    }
+
+    #[test]
+    fn brazilian_portuguese_lookup_counts_and_fallbacks() {
+        set_current(Language::PtBr);
+        assert_eq!(tr("File"), "Arquivo");
+        assert_eq!(tr("Insert"), "Inserir");
+        assert_eq!(tr_context("Insert", "@ribbon:Insert"), "Inserir");
+        assert_eq!(tr("a user-defined slide title"), "a user-defined slide title");
+        assert_eq!(count(1, "slide", "слайд|слайди|слайдів", "slide|slides"), "1 slide");
+        assert_eq!(count(3, "slides", "слайд|слайди|слайдів", "slide|slides"), "3 slides");
+        for (n, word) in
+            [(0, "apresentação não salva"), (1, "apresentação não salva"), (2, "apresentações não salvas"), (11, "apresentações não salvas")]
+        {
+            let text = recovered(n);
+            assert!(text.contains(word), "{n}: {text}");
+        }
+        set_current(Language::En);
+        assert_eq!(tr("File"), "File");
+    }
+
+    #[test]
+    fn bundled_document_font_covers_the_brazilian_portuguese_catalog() {
+        let db = deckcraft_fonts::FontDb::with_font_dirs(vec![]);
+        let face = db.face(deckcraft_fonts::LAST_RESORT_FAMILY, "Regular");
         let letters: std::collections::HashSet<_> =
-            catalog().values().flat_map(|value| value.chars()).chain("ҐґЄєІіЇї".chars()).filter(|c| ('\u{0400}'..='\u{04ff}').contains(c)).collect();
+            catalog(Language::PtBr).unwrap().values().flat_map(|value| value.chars()).filter(|c| ('\u{00c0}'..='\u{00ff}').contains(c)).collect();
         for c in letters {
             assert_ne!(face.glyph_for(c), 0, "missing document fallback glyph: {c}");
         }
@@ -274,7 +361,7 @@ mod tests {
     fn ukrainian_interface_preview() {
         let dir = std::env::var("DECKCRAFT_I18N_SHOTS").unwrap();
         std::fs::create_dir_all(&dir).unwrap();
-        for (code, language) in [("en", Language::En), ("uk", Language::Uk)] {
+        for (code, language) in [("en", Language::En), ("uk", Language::Uk), ("pt-BR", Language::PtBr)] {
             for (name, dialog) in [("editor", None), ("preferences", Some("preferences")), ("table", Some("table"))] {
                 let mut app = crate::SlideApp::new(deckcraft_engine::Session::new(), crate::Services::default());
                 app.run("file.new", serde_json::json!({})).unwrap();
@@ -309,16 +396,18 @@ mod tests {
     }
 
     #[test]
-    fn catalog_is_unique_complete_and_preserves_placeholders() {
-        let mut seen = std::collections::HashSet::new();
-        for (line_no, line) in CATALOG.lines().enumerate() {
-            if line.is_empty() || line.starts_with('#') {
-                continue;
+    fn catalogs_are_unique_complete_and_preserve_placeholders() {
+        for (code, source) in [("uk", UK_SOURCE), ("pt-BR", PT_BR_SOURCE)] {
+            let mut seen = std::collections::HashSet::new();
+            for (line_no, line) in source.lines().enumerate() {
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                let (source, text) = line.split_once('\t').unwrap();
+                assert!(seen.insert(source), "{code}: duplicate on {}: {source}", line_no + 1);
+                assert!(!text.trim().is_empty(), "{code}: empty translation: {source}");
+                assert_eq!(placeholders(source), placeholders(text), "{code}: placeholder names/order/format: {source}");
             }
-            let (source, text) = line.split_once('\t').unwrap();
-            assert!(seen.insert(source), "duplicate on {}: {source}", line_no + 1);
-            assert!(!text.trim().is_empty(), "empty translation: {source}");
-            assert_eq!(placeholders(source), placeholders(text), "placeholder names/order/format: {source}");
         }
     }
 
@@ -351,7 +440,7 @@ mod tests {
             (24, "слайди"),
             (111, "слайдів"),
         ] {
-            assert_eq!(count(n, "slides", "слайд", "слайди", "слайдів"), format!("{n} {word}"));
+            assert_eq!(count(n, "slides", "слайд|слайди|слайдів", "slide|slides"), format!("{n} {word}"));
         }
         set_current(Language::En);
     }

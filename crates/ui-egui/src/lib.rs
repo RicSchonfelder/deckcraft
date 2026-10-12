@@ -159,7 +159,7 @@ pub const UI_COMMANDS: &[(&str, &str, Option<&str>, &str)] = &[
     ("app.about", "About DeckCraft", None, "{}"),
     ("app.palette", "Command Palette", Some("Cmd+Shift+P"), "{}"),
     ("app.preferences", "Preferences…", Some("Cmd+,"), "{}"),
-    ("app.language", "Interface Language", None, "{language: system|en|uk}"),
+    ("app.language", "Interface Language", None, "{language: system|en|uk|pt-BR}"),
     ("app.openDialog", "Open…", None, "{purpose?}"),
     ("app.insertPictureDialog", "Picture from File…", None, "{}"),
     ("app.insertAudioDialog", "Audio from File…", None, "{}"),
@@ -360,6 +360,7 @@ impl SlideApp {
                     "system" => i18n::Language::System,
                     "en" => i18n::Language::En,
                     "uk" => i18n::Language::Uk,
+                    "pt-BR" => i18n::Language::PtBr,
                     _ => return Err("unknown interface language".into()),
                 };
                 i18n::set_current(self.ui.interface_language.resolve(self.services.system_locale.as_deref()));

@@ -2,7 +2,7 @@
 
 **Stage: alpha** · next: beta, ~20 points and ~120–210 h away
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-10 · **Change:** minor (Ukrainian UI catalog and language selection) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-12 · **Change:** minor (Brazilian Portuguese UI catalog added alongside Ukrainian) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
 
 DeckCraft aims at full PowerPoint parity, and to be better: faster, open (a documented zip+JSON
 format plus PPTX), scriptable by agents (CLI, JSON control channel, MCP), and available everywhere
@@ -84,10 +84,11 @@ EMF/SVG pictures, the data-loss and startup-crash bugs (#60, #40, #59) and the b
 
 ## Languages
 
-English and Ukrainian: Preferences offers System language, English and Українська. Ukrainian
-OS/browser locales select Ukrainian automatically; explicit desktop choices persist in `ui.json`.
-Menus, ribbon, command palette, panels, dialogs and presenter controls use the interface catalog.
-Presentation content and command IDs retain their original values. Detail:
+English, Ukrainian and Brazilian Portuguese: Preferences offers System language, English,
+Українська and Português (Brasil). Matching OS/browser locales select a catalog automatically;
+explicit desktop choices persist in `ui.json`. Menus, ribbon, command palette, panels, dialogs and
+presenter controls use the interface catalog. Presentation content and command IDs retain their
+original values. Detail:
 [docs/localization-parity.md](docs/localization-parity.md).
 
 | Language | Code | UI strings | Status | Hours to full |
@@ -105,8 +106,9 @@ Presentation content and command IDs retain their original values. Detail:
 | Korean | ko | 0% | none | 4–7 |
 | Vietnamese | vi | 0% | none | 3–5 |
 
-Other languages shipped: **Ukrainian (uk)**, with English fallback and bundled Cyrillic glyph
-coverage. PowerPoint for Mac ships 26 languages; additional catalogs and native review remain.
+Other languages shipped: **Ukrainian (uk) and Brazilian Portuguese (pt-BR)**, with English fallback
+and bundled glyph coverage. PowerPoint for Mac ships 26 languages; additional catalogs and native
+review remain.
 
 ## Upcoming
 
@@ -131,6 +133,7 @@ app's JSON control channel (`deckcraft --control PORT`).
 
 | Date | What landed |
 |---|---|
+| 2026-10-12 | Brazilian Portuguese UI catalog (`pt-br.tsv`) added on the Ukrainian infrastructure |
 | 2026-10-10 | Ukrainian UI catalog, system-language detection and persisted language choice (#15, #30); translated placeholder prompts preserve presentation content |
 | 2026-10-10 | Progress docs restructured to the craftrules standard; full re-measure (breadth 79%, ready ~55%, mainstream ~53%, essentials ~62%, alpha). Landed: Animation Painter (#54), Morph geometry outlines (#27), animated GIF playback (#39), hyperlink colour and following links in the show (#37, #45), date fields in their own format (#36), flipped shapes keep readable text (#35), show transition fix (#46), start screen from the Home button (#49), MCP export lists PDF (#65), OmaStore manifest (#57) |
 | 2026-10-09 | v0.4.0 released. UAX #9 bidi and Arabic shaping (#4), Morph with Words and Characters (#5), tables grow to fit and PDF cell text (#14), rotating log file (#7), DX12 default on Windows (#16), H.264/HEVC overflow hardening (#2), PPTX sniffing anywhere in the zip (#19) |
@@ -143,6 +146,7 @@ app's JSON control channel (`deckcraft --control PORT`).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-12 | minor | Recorded the Brazilian Portuguese catalog in the language summary |
 | 2026-10-10 | minor | Added Ukrainian UI and language selection to the reorganized language summary |
 | 2026-10-10 | minor | Readiness-by-audience table with hours to ~95% for full, mainstream and essentials |
 | 2026-10-10 | minor | Added mainstream practitioner (~53%) and essentials user (~62%); features recomputed from written area weights, ready ~56% → ~55% |

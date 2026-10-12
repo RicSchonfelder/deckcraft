@@ -269,7 +269,7 @@ fn body(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             let what = if names.len() == 1 {
                 format!("“{}”", names[0])
             } else {
-                crate::i18n::count(names.len(), "presentations", "презентації", "презентацій", "презентацій")
+                crate::i18n::count(names.len(), "presentations", "презентації|презентацій|презентацій", "apresentação|apresentações")
             };
             ui.label(
                 egui::RichText::new(crate::i18n::format("Do you want to save the changes you made to {what}?", std::slice::from_ref(&what))).strong(),
@@ -609,7 +609,12 @@ fn body(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                     ui.label(format!(
                         "{} ({})",
                         s.name,
-                        crate::i18n::count(s.slides.len(), if s.slides.len() == 1 { "slide" } else { "slides" }, "слайд", "слайди", "слайдів")
+                        crate::i18n::count(
+                            s.slides.len(),
+                            if s.slides.len() == 1 { "slide" } else { "slides" },
+                            "слайд|слайди|слайдів",
+                            "slide|slides"
+                        )
                     ));
                     if ui.small_button(crate::i18n::tr("Delete")).clicked() {
                         let _ = app.run("show.customShow", json!({"name": s.name, "delete": true}));
@@ -747,12 +752,7 @@ fn body(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                 egui::ComboBox::from_id_salt("interface_language").selected_text(app.ui.interface_language.label()).show_ui(ui, |ui| {
                     for language in crate::i18n::Language::ALL {
                         if ui.selectable_label(app.ui.interface_language == language, crate::i18n::tr(language.label())).clicked() {
-                            let code = match language {
-                                crate::i18n::Language::System => "system",
-                                crate::i18n::Language::En => "en",
-                                crate::i18n::Language::Uk => "uk",
-                            };
-                            let _ = app.run("app.language", json!({"language": code}));
+                            let _ = app.run("app.language", json!({"language": language.code()}));
                         }
                     }
                 });

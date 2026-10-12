@@ -593,7 +593,9 @@ fn paragraph_group(app: &mut SlideApp, ui: &mut Ui, st: &Value) {
                 let r = icon_toggle(ui, Icon::Columns, "Columns", en, false);
                 egui::Popup::menu(&r).show(|ui| {
                     for n in 1..=3 {
-                        if ui.button(crate::i18n::count(n, if n == 1 { "Column" } else { "Columns" }, "стовпець", "стовпці", "стовпців")).clicked()
+                        if ui
+                            .button(crate::i18n::count(n, if n == 1 { "Column" } else { "Columns" }, "стовпець|стовпці|стовпців", "coluna|colunas"))
+                            .clicked()
                         {
                             run(app, "format.columns", json!({"count": n, "spacing": 18}));
                         }

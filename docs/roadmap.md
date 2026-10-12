@@ -1,6 +1,6 @@
 # DeckCraft roadmap: milestones and what's next
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-10 · **Change:** minor (localization infrastructure and Ukrainian UI available) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-12 · **Change:** minor (Brazilian Portuguese UI added on the localization infrastructure) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
 
 Forward-looking: where DeckCraft is going and in what order. The one-page summary is
 [ROADMAP.md](../ROADMAP.md); every shortfall is in [gaps.md](gaps.md); numbers are in
@@ -29,7 +29,8 @@ points and lead the beta plan.
 2. **PPTX on real decks:** build an owned corpus, round-trip checks in CI, fix what breaks;
    comment threads, media options and rewind on save (#70, #74, #77); EMF/WMF and SVG. 31–55 h.
 3. **Review the open PRs:** equations (#55), browser print (#66), Morph alignment (#67), macOS
-   open-with (#68), font lookup (#80). 4–8 h. Ukrainian UI and its catalog are available (#34).
+   open-with (#68), font lookup (#80). 4–8 h. Ukrainian UI and its catalog are available (#34);
+   Brazilian Portuguese rides on the same catalog infrastructure.
 
 ## Plan to beta (~120–210 h; ~40–70 h wall clock with 3–4 agents)
 
@@ -109,6 +110,7 @@ plan above.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-12 | minor | Recorded the Brazilian Portuguese catalog on the shared localization infrastructure |
 | 2026-10-10 | minor | Recorded Ukrainian UI and catalog infrastructure; beta localization work now focuses on additional languages and IME |
 | 2026-10-10 | minor | Added the alpha gate (six core workflows): all pass, two with partial depth; stage stays alpha |
 | 2026-10-10 | major | Created: current focus, ranked beta plan with hours, milestones M0–M14 with status, the old alpha checklist as history |
